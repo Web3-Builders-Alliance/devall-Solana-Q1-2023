@@ -1,22 +1,22 @@
-### Code Journal about [Account Data](https://github.com/solana-developers/program-examples/tree/main/basics/account-data/native/program/src)
+# Code Journal 1 - [Account Data](https://github.com/solana-developers/program-examples/tree/main/basics/account-data/native/program/src)
 
-This code implements a program for Solana whose purpose is to create an account for storing the AddressInfo data structure using the CPI (cross program invocation) of the Solana system program.
+This code implements a program on Solana whose purpose is to create an account for storing the AddressInfo data structure using the CPI (cross program invocation) of the Solana system program.
 
-## Code
+# Code
 
 This program contains the following file structure:
-- lib.rs - entry point
-- processor.rs - executes the create statement
-- instructions - program instructions
-   - create.rs - instructions for creating an account for data
-   - mod.rs
-- state - data structures
-   - address_info.rs - structure for address
-   - mod.rs
+- `lib.rs` - entry point
+- `processor.rs` - executes the create statement
+- `instructions` - program instructions
+   - `create.rs` - instructions for creating an account for data
+   - `mod.rs` - declares parts of the current folder
+- `state` - data structures
+   - `address_info.rs` - structure for address
+   - `mod.rs` - declares parts of the current folder
 
 Let's take a closer look at the code
 
-### address_info.rs
+## state/[address_info.rs](https://github.com/solana-developers/program-examples/blob/main/basics/account-data/native/program/src/state/address_info.rs)
 
 Import of dependencies
 ```rust
@@ -53,7 +53,7 @@ impl AddressInfo {
 }
 ```
 
-### lib.rs
+## [lib.rs](https://github.com/solana-developers/program-examples/blob/main/basics/account-data/native/program/src/lib.rs)
 
 Import of dependencies
 ```rust
@@ -76,7 +76,7 @@ Call entrypoint
 entrypoint!(process_instruction);
 ```
 
-### processor.rs
+## [processor.rs](https://github.com/solana-developers/program-examples/blob/main/basics/account-data/native/program/src/processor.rs)
 
 Import dependencies
 ```rust
@@ -128,7 +128,7 @@ pub fn process_instruction(
 }
 ```
 
-### Let's delve into the logic of the instruction - create.rs
+## Let's dive into the logic of the instruction - instructions/[create.rs](https://github.com/solana-developers/program-examples/blob/main/basics/account-data/native/program/src/instructions/create.rs)
 
 Import dependencies
 ```rust
