@@ -147,8 +147,12 @@ impl Processor {
         }
 
         let current_slot = Clock::get()?.slot;
-        if !(current_slot >= escrow_info.unlock_time && current_slot <= escrow_info.time_out) {
-            return Err(EscrowError::Timelock.into());
+        if current_slot >= escrow_info.unlock_time {
+            return Err(EscrowError::EscrowUnlockTime.into());
+        }
+
+        if current_slot <= escrow_info.time_out {
+            return Err(EscrowError::EscrowTimeout.into());
         }
 
         let token_program = next_account_info(account_info_iter)?;

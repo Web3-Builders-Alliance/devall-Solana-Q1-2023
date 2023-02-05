@@ -14,8 +14,10 @@ pub enum EscrowError {
     ExpectedAmountMismatch,
     #[error("Amount overflow")]
     AmountOverflow,
-    #[error("Timelock")]
-    Timelock,
+    #[error("Current slot greater than Escrow Timeout")]
+    EscrowTimeout,
+    #[error("Current slot lesser than Escrow Unlock time")]
+    EscrowUnlockTime,
 }
 
 impl From<EscrowError> for ProgramError {
