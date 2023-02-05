@@ -44,6 +44,20 @@ pub enum EscrowInstruction {
         /// the amount the taker expects to be paid in the other token, as a u64 because that's the max possible supply of a token
         amount: u64,
     },
+
+    // Reset Time lock and time_out
+    /// 0. `[signer]` The initializer that is reseting the timelock
+    /// 1. `[writable]` The escrow account holding the escrow info
+    ResetTimeLock {},
+
+    // Cancel Escrow
+    /// 0. `[signer]` The initializer that is canceling their escrow
+    /// 1. `[writable]` The PDA's temp token account to get tokens from and eventually close
+    /// 3. `[writable]` The initializer's token account that will receive tokens
+    /// 4. `[writable]` The escrow account holding the escrow info
+    /// 5. `[]` The token program
+    /// 6. `[]` The PDA account
+    Cancel {},
 }
 
 impl EscrowInstruction {
@@ -58,6 +72,8 @@ impl EscrowInstruction {
             1 => Self::Exchange {
                 amount: Self::unpack_amount(rest)?,
             },
+            2 => Self::ResetTimeLock {},
+            3 => Self::Cancel {},
             _ => return Err(InvalidInstruction.into()),
         })
     }
@@ -69,5 +85,26 @@ impl EscrowInstruction {
             .map(u64::from_le_bytes)
             .ok_or(InvalidInstruction)?;
         Ok(amount)
+    }
+
+    pub fn pack(&self) -> Vec<u8> {
+        let mut buf = Vec::with_capacity(size_of::<Self>());
+        match &*self {
+            Self::InitEscrow { amount } => {
+                buf.push(0);
+                buf.extend_from_slice(&amount.to_le_bytes());
+            }
+            Self::Exchange { amount } => {
+                buf.push(1);
+                buf.extend_from_slice(&amount.to_le_bytes());
+            }
+            Self::ResetTimeLock {} => {
+                buf.push(2);
+            }
+            Self::Cancel {} => {
+                buf.push(3);
+            }
+        }
+        buf
     }
 }

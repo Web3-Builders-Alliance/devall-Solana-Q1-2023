@@ -227,4 +227,110 @@ impl Processor {
 
         Ok(())
     }
+
+    fn process_reset_timelock(accounts: &[AccountInfo], program_id: &Pubkey) -> ProgramResult {
+        let account_info_iter = &mut accounts.iter();
+        let initializer = next_account_info(account_info_iter)?;
+
+        if !initializer.is_signer {
+            return Err(ProgramError::MissingRequiredSignature);
+        }
+
+        let escrow_account = next_account_info(account_info_iter)?;
+
+        if escrow_account.owner != program_id || escrow_account.is_writable == false {
+            return Err(ProgramError::IllegalOwner);
+        }
+
+        let mut escrow_info = Escrow::unpack(&escrow_account.try_borrow_data()?)?;
+
+        if escrow_info.initializer_pubkey != *initializer.key {
+            return Err(ProgramError::InvalidAccountData);
+        }
+
+        escrow_info.unlock_time = 0;
+        escrow_info.timeout_time = 0;
+
+        Ok(())
+    }
+
+    fn process_cancel(accounts: &[AccountInfo], program_id: &Pubkey) -> ProgramResult {
+        let account_info_iter = &mut accounts.iter();
+        let initializer = next_account_info(account_info_iter)?;
+
+        if !initializer.is_signer {
+            return Err(ProgramError::MissingRequiredSignature);
+        }
+
+        let pda_token_account = next_account_info(account_info_iter)?;
+        let initializer_main_account = next_account_info(account_info_iter)?;
+        let initializer_sent_token_account = next_account_info(account_info_iter)?;
+        let escrow_account = next_account_info(account_info_iter)?;
+
+        if escrow_account.owner != program_id || escrow_account.is_writable == false {
+            return Err(ProgramError::IllegalOwner);
+        }
+
+        let escrow_info = Escrow::unpack(&escrow_account.try_borrow_data()?)?;
+
+        if escrow_info.initializer_pubkey != *initializer.key {
+            return Err(ProgramError::InvalidAccountData);
+        }
+
+        let token_program = next_account_info(account_info_iter)?;
+        let pda_account_info = next_account_info(account_info_iter)?;
+        let pda_token_account_info = TokenAccount::unpack(&pda_token_account.try_borrow_data()?)?;
+
+        let (pda, nonce) = Pubkey::find_program_address(&[b"escrow"], program_id);
+
+        //transfer tokens back to initializer
+        let transfer_to_initializer_ix = spl_token::instruction::transfer(
+            token_program.key,
+            pda_token_account.key,
+            initializer_sent_token_account.key,
+            &pda,
+            &[&pda],
+            pda_token_account_info.amount,
+        )?;
+        msg!("Calling the token program to transfer tokens back to the initializer...");
+        invoke_signed(
+            &transfer_to_initializer_ix,
+            &[
+                pda_token_account.clone(),
+                initializer_sent_token_account.clone(),
+                pda_account_info.clone(),
+                token_program.clone(),
+            ],
+            &[&[&b"escrow"[..], &[nonce]]],
+        )?;
+
+        let close_escrow_token_acct_ix = spl_token::instruction::close_account(
+            token_program.key,
+            pda_token_account.key,
+            initializer_main_account.key,
+            &pda,
+            &[&pda],
+        )?;
+        msg!("Calling the token program to close the escrow token account...");
+        invoke_signed(
+            &close_escrow_token_acct_ix,
+            &[
+                pda_token_account.clone(),
+                initializer_main_account.clone(),
+                pda_account_info.clone(),
+                token_program.clone(),
+            ],
+            &[&[&b"escrow"[..], &[nonce]]],
+        )?;
+
+        msg!("Closing the escrow account...");
+        **initializer_main_account.try_borrow_mut_lamports()? = initializer_main_account
+            .lamports()
+            .checked_add(escrow_account.lamports())
+            .ok_or(EscrowError::AmountOverflow)?;
+        **escrow_account.try_borrow_mut_lamports()? = 0;
+        *escrow_account.try_borrow_mut_data()? = &mut [];
+
+        Ok(())
+    }
 }
